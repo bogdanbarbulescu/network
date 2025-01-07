@@ -4,15 +4,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firewall Diagram</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Networking Diagram</title>
+    <style>
+        /* General Styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #6fb1fc, #ffffff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background-color: #fff;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            width: 90%;
+            max-width: 1200px;
+            overflow: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #4ca3f5;
+            color: white;
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #f9f9f9;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        th {
+            background-color: #222831;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        button {
+            padding: 8px 15px;
+            background-color: #EEEEEE;
+            color: rgb(0, 0, 0);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #c0c0c0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            position: relative;
+            width: 70%;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background-color: #e60000;
+        }
+    </style>
 </head>
 
 <body>
     <div class="card">
-        <h1>Firewall Diagram</h1>
-
-        <!-- Table Placeholder -->
+        <h1>Networking Diagram</h1>
         <table>
             <thead>
                 <tr>
@@ -27,17 +135,128 @@
                     <th>Action</th>
                 </tr>
             </thead>
-            <tbody id="tableBody">
-                <!-- Rows will be populated dynamically -->
-            </tbody>
+            <tbody id="tableBody"></tbody>
         </table>
+    </div>
 
-        <!-- Canvas to Draw the Diagram -->
-        <div class="canvas-container">
+    <div class="modal" id="diagramModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">×</button>
             <canvas id="networkCanvas"></canvas>
         </div>
     </div>
-    <script src="scripts.js"></script>
+
+    <script>
+        const modal = document.getElementById('diagramModal');
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const jsonData = [
+            {
+                "sourceIP": "192.168.10.2",
+                "srcInterface1": "LAN",
+                "firewall1": "FW1",
+                "dstInterface1": "INT1",
+                "srcInterface2": "INT1",
+                "firewall2": "FW2",
+                "dstInterface2": "LAN",
+                "destinationIP": "10.10.50.10"
+            },
+            {
+                "sourceIP": "172.16.1.1",
+                "srcInterface1": "DMZ",
+                "firewall1": "FW1",
+                "dstInterface1": "WAN",
+                "srcInterface2": "WAN",
+                "firewall2": "FW2",
+                "dstInterface2": "DMZ",
+                "destinationIP": "172.16.2.2"
+            }
+        ];
+
+        function populateTable(data) {
+            const tableBody = document.getElementById("tableBody");
+            tableBody.innerHTML = "";
+            data.forEach((item, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${item.sourceIP}</td>
+                    <td>${item.srcInterface1}</td>
+                    <td>${item.firewall1}</td>
+                    <td>${item.dstInterface1}</td>
+                    <td>${item.srcInterface2}</td>
+                    <td>${item.firewall2}</td>
+                    <td>${item.dstInterface2}</td>
+                    <td>${item.destinationIP}</td>
+                    <td><button onclick="showDiagram(${index})">Show Diagram</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function drawSymbol(x, y, symbol, text, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 30, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = "#000";
+            ctx.stroke();
+            ctx.fillStyle = "#000";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "bold 35px Arial";
+            ctx.fillText(symbol, x, y); // Symbol
+            ctx.font = "bold 14px Arial";
+            ctx.fillText(text, x, y + 55);  // Text label
+            
+        }
+
+        function drawArrow(x1, y1, x2, y2) {
+            const headlen = 10;
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const angle = Math.atan2(dy, dx);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function showDiagram(index) {
+            const item = jsonData[index];
+            canvas.width = 1100;
+            canvas.height = 400;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const positions = [
+                { x: 100, y: 200, symbol: "🖥️", text: item.sourceIP, color: "#FFFFFF" }, // Source PC
+                { x: 250, y: 200, symbol: "▶", text: item.srcInterface1, color: "#FFFFFF" }, // Source Interface
+                { x: 400, y: 200, symbol: "🔥", text: item.firewall1, color: "#FFFFFF" }, // Firewall 1
+                { x: 550, y: 200, symbol: "▶", text: item.dstInterface1, color: "#FFFFFF" }, // Destination Interface 1
+                { x: 700, y: 200, symbol: "🔥", text: item.firewall2, color: "#FFFFFF" }, // Firewall 2
+                { x: 850, y: 200, symbol: "▶", text: item.dstInterface2, color: "#FFFFFF" }, // Destination Interface 2
+                { x: 1000, y: 200, symbol: "🖥️", text: item.destinationIP, color: "#FFFFFF" }, // Destination PC
+            ];
+
+            positions.forEach((pos, i) => {
+                drawSymbol(pos.x, pos.y, pos.symbol, pos.text, pos.color);
+                if (i > 0) drawArrow(positions[i - 1].x + 30, positions[i - 1].y, pos.x - 30, pos.y);
+            });
+
+            modal.style.display = "flex";
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+
+        populateTable(jsonData);
+    </script>
 
 </body>
 
